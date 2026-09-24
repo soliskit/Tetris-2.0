@@ -14,6 +14,8 @@ class GameManager {
     private var gameLoopTask: Task<Void, Never>?
     private var lockDelayTask: Task<Void, Never>?
     private var lockDelayResetCount: Int = 0
+    /// Lowest row the current piece has reached. Only a new lowest row refills its moves.
+    private var lowestRowReached: Int = 0
     private let maxLockDelayResets: Int = 15
     private let lockDelayInterval: TimeInterval = 0.5
     var currentTetromino: Tetromino
@@ -59,7 +61,7 @@ class GameManager {
         nextTetrominos = (0..<3).map { _ in TetrominoFactory.generate() }
         heldTetromino = nil
         canHoldTetromino = true
-        cancelLockDelay()
+        resetLockDelayForNewPiece()
         isSessionSaved = false
     }
 
@@ -78,6 +80,7 @@ class GameManager {
         nextTetrominos = session.nextTetrominos
         heldTetromino = session.heldTetromino
         canHoldTetromino = session.canHoldTetromino
+        resetLockDelayForNewPiece()
     }
 
     private func saveGameSession() {
@@ -95,11 +98,11 @@ class GameManager {
         currentTetromino = nextTetrominos.removeFirst()
         nextTetrominos.append(TetrominoFactory.generate())
         canHoldTetromino = true
-        cancelLockDelay()
 
         currentTetromino.shape = currentTetromino.rotations[0]
         currentTetromino.rotationState = 0
         currentTetromino.position = spawnPositionFor(currentTetromino)
+        resetLockDelayForNewPiece()
 
         if !isValidTetrominoPosition(tetromino: currentTetromino, at: currentTetromino.position) {
             state = .gameOver
@@ -114,9 +117,9 @@ class GameManager {
         if isValidTetrominoPosition(tetromino: currentTetromino, at: newPosition) {
             currentTetromino.position = newPosition
             cancelLockDelay()
-        } else if lockDelayTask == nil {
-            // Piece hit the surface for the first time — start lock delay
-            startLockDelay()
+            noteLowestRow()
+        } else {
+            pieceLanded()
         }
         // Keep gravity running so piece falls if surface disappears
         if state == .playing {
@@ -141,22 +144,50 @@ class GameManager {
         }
     }
 
-    private func resetLockDelay() {
-        guard lockDelayTask != nil else { return }
-        if isOnSurface {
-            if lockDelayResetCount < maxLockDelayResets {
-                lockDelayResetCount += 1
-                startLockDelay()
-            }
+    /// Starts the lock delay when the piece comes to rest. A piece that has
+    /// used all its moves locks straight away instead.
+    private func pieceLanded() {
+        guard lockDelayTask == nil else { return }
+        if lockDelayResetCount >= maxLockDelayResets {
+            lockAndSpawnNext()
         } else {
-            cancelLockDelay()
+            startLockDelay()
         }
     }
 
+    /// Called after a successful move or rotation.
+    private func resetLockDelay() {
+        noteLowestRow()
+        guard lockDelayTask != nil else { return }
+        if !isOnSurface {
+            // Lifted off the surface, so let it fall. The lift still costs a
+            // move, or rotating in place could earn endless fresh lock delays.
+            cancelLockDelay()
+            lockDelayResetCount += 1
+        } else if lockDelayResetCount < maxLockDelayResets {
+            lockDelayResetCount += 1
+            startLockDelay()
+        }
+    }
+
+    /// Reaching a new lowest row refills the piece's moves. Nothing else does,
+    /// so moves and rotations can't hold a piece up forever.
+    private func noteLowestRow() {
+        guard currentTetromino.position.row > lowestRowReached else { return }
+        lowestRowReached = currentTetromino.position.row
+        lockDelayResetCount = 0
+    }
+
+    private func resetLockDelayForNewPiece() {
+        cancelLockDelay()
+        lockDelayResetCount = 0
+        lowestRowReached = currentTetromino.position.row
+    }
+
+    /// Stops the lock timer. The piece's remaining moves are kept.
     private func cancelLockDelay() {
         lockDelayTask?.cancel()
         lockDelayTask = nil
-        lockDelayResetCount = 0
     }
 
     private func lockAndSpawnNext() {
@@ -280,6 +311,11 @@ class GameManager {
             case .pause:
                 state = .paused
                 stopGameLoop()
+                // Resuming starts a fresh lock delay, so pausing on the stack
+                // costs a move, or pause and resume could hold a piece forever.
+                if lockDelayTask != nil {
+                    lockDelayResetCount += 1
+                }
                 cancelLockDelay()
                 saveGameSession()
             case .resume:
@@ -305,8 +341,9 @@ class GameManager {
         if isValidTetrominoPosition(tetromino: currentTetromino, at: newPosition) {
             currentTetromino.position = newPosition
             cancelLockDelay()
-        } else if lockDelayTask == nil {
-            startLockDelay()
+            noteLowestRow()
+        } else {
+            pieceLanded()
         }
         if state == .playing {
             startGameLoop(withSoftDrop: true)
@@ -361,6 +398,7 @@ class GameManager {
             heldTetromino = pieceToHold
             currentTetromino = tetrominoToSwap
             currentTetromino.position = spawnPos
+            resetLockDelayForNewPiece()
             canHoldTetromino = false
         } else {
             var pieceToHold = currentTetromino

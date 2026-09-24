@@ -29,11 +29,13 @@ class GameControllerManager {
     }
 
     private func setupControllers() {
-        connectionTask = Task {
+        // Weak, like the disconnect listener, so this loop doesn't keep the
+        // manager alive after its GameManager is gone.
+        connectionTask = Task { [weak self] in
             for await notification in NotificationCenter.default.notifications(named: .GCControllerDidConnect) {
-                guard !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled else { return }
                 if let controller = notification.object as? GCController {
-                    configure(controller: controller)
+                    self.configure(controller: controller)
                 }
             }
         }

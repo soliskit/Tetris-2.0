@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var gameManager = GameManager()
+    var gameManager: GameManager
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("highScore") private var highScore: Int = 0
     @State private var dragCellOffset: Int = 0
