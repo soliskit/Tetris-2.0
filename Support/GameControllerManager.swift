@@ -13,6 +13,7 @@ class GameControllerManager {
     private var wasBPressed = false
     private var wasXPressed = false
     private var wasAPressed = false
+    private var wasYPressed = false
 
     init(gameManager: GameManager) {
         self.gameManager = gameManager
@@ -57,16 +58,17 @@ class GameControllerManager {
             let bPressed = gamepad.buttonB.isPressed
             let xPressed = gamepad.buttonX.isPressed
             let aPressed = gamepad.buttonA.isPressed
+            let yPressed = gamepad.buttonY.isPressed
             let xAxis = gamepad.leftThumbstick.xAxis.value
             let yAxis = gamepad.leftThumbstick.yAxis.value
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.processInput(menuPressed: menuPressed, bPressed: bPressed, xPressed: xPressed, aPressed: aPressed, xAxis: xAxis, yAxis: yAxis)
+                self.processInput(menuPressed: menuPressed, bPressed: bPressed, xPressed: xPressed, aPressed: aPressed, yPressed: yPressed, xAxis: xAxis, yAxis: yAxis)
             }
         }
     }
 
-    private func processInput(menuPressed: Bool, bPressed: Bool, xPressed: Bool, aPressed: Bool, xAxis: Float, yAxis: Float) {
+    private func processInput(menuPressed: Bool, bPressed: Bool, xPressed: Bool, aPressed: Bool, yPressed: Bool, xAxis: Float, yAxis: Float) {
         // This runs for every element change, including stick jitter while a
         // button is held, so buttons only act on the press itself.
         defer {
@@ -74,14 +76,20 @@ class GameControllerManager {
             wasBPressed = bPressed
             wasXPressed = xPressed
             wasAPressed = aPressed
+            wasYPressed = yPressed
         }
 
+        // Menu starts a new game from the game over screen. A is left out on
+        // purpose: players often mash it as the game ends.
         if menuPressed && !wasMenuPressed {
-            if gameManager?.state == .playing {
-                gameManager?.handleAction(.pause)
-            } else if gameManager?.state == .paused {
-                gameManager?.handleAction(.resume)
+            if gameManager?.state == .gameOver {
+                gameManager?.handleAction(.newGame)
+            } else {
+                gameManager?.togglePause()
             }
+        }
+        if yPressed && !wasYPressed {
+            gameManager?.handleAction(.continueGame)
         }
         if bPressed && !wasBPressed {
             gameManager?.handleAction(.rotate)
@@ -184,5 +192,6 @@ class GameControllerManager {
         wasBPressed = false
         wasXPressed = false
         wasAPressed = false
+        wasYPressed = false
     }
 }

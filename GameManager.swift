@@ -294,10 +294,14 @@ class GameManager {
     func handleAction(_ action: PlayerAction) {
         switch action {
             case .newGame:
+                // Keys and buttons can send this at any time; only the game
+                // over screen offers it, so a stray press can't wipe a game.
+                guard state == .gameOver else { return }
                 resetGameSession()
                 state = .playing
                 startGameLoop()
             case .continueGame:
+                guard state == .gameOver else { return }
                 loadGameSession()
             case .pause:
                 state = .paused
@@ -322,6 +326,18 @@ class GameManager {
                 rotateTetromino()
             case .drop:
                 hardDrop()
+        }
+    }
+
+    /// Pauses a running game or resumes a paused one.
+    func togglePause() {
+        switch state {
+            case .playing:
+                handleAction(.pause)
+            case .paused:
+                handleAction(.resume)
+            case .gameOver:
+                break
         }
     }
 
