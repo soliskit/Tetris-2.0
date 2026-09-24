@@ -26,6 +26,8 @@ class GameManager {
     var state: GameState = .gameOver
     var score: Int = 0
     var level: Int = 1
+    /// Whether GameController currently sees a hardware keyboard.
+    var isKeyboardConnected: Bool = false
     private var standardDropInterval: TimeInterval {
         // Base interval decreases slightly with level, clamped to a sensible minimum
         max(0.25, 0.7 - (0.02 * Double(level - 1)))

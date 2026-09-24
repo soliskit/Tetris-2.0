@@ -128,18 +128,6 @@ struct ContentView: View {
                 .padding()
             }
         }
-        .background {
-            KeyboardInputView(
-                moveLeft: { gameManager.handleAction(.moveLeft) },
-                moveRight: { gameManager.handleAction(.moveRight) },
-                rotate: { gameManager.handleAction(.rotate) },
-                drop: { gameManager.handleAction(.drop) },
-                hold: { gameManager.handleAction(.hold) },
-                newGame: { gameManager.handleAction(.newGame) },
-                continueGame: { gameManager.handleAction(.continueGame) },
-                togglePause: { gameManager.togglePause() }
-            )
-        }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase != .active else { return }
             // Leaving the app cancels a drag in progress without calling onEnded.
