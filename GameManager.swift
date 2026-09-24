@@ -111,7 +111,7 @@ class GameManager {
         }
     }
 
-    private func dropTetromino(isSoftDropping: Bool = false) {
+    private func dropTetromino() {
         guard state == .playing else { return }
         let newPosition = Position(row: currentTetromino.position.row + 1, column: currentTetromino.position.column)
         if isValidTetrominoPosition(tetromino: currentTetromino, at: newPosition) {
@@ -123,7 +123,7 @@ class GameManager {
         }
         // Keep gravity running so piece falls if surface disappears
         if state == .playing {
-            startGameLoop(withSoftDrop: isSoftDropping)
+            startGameLoop()
         }
     }
 
@@ -244,16 +244,7 @@ class GameManager {
     // MARK: - Ghost Piece
     /// A projection of the current tetromino at its landing position.
     var ghostTetromino: Tetromino {
-        var ghost = Tetromino(
-            shape: currentTetromino.shape,
-            color: currentTetromino.color,
-            position: currentTetromino.position,
-            rotations: currentTetromino.rotations,
-            wallKickData: currentTetromino.wallKickData
-        )
-        // Match current rotation state exactly
-        ghost.rotationState = currentTetromino.rotationState
-        ghost.shape = ghost.rotations[min(max(ghost.rotationState, 0), ghost.rotations.count - 1)]
+        var ghost = currentTetromino
 
         // Drop the ghost straight down until it no longer fits
         while true {

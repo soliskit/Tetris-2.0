@@ -8,7 +8,6 @@ class GameControllerManager {
     private var connectionTask: Task<Void, Never>?
     private var disconnectionTask: Task<Void, Never>?
     private var softDropTask: Task<Void, Never>? = nil
-    private var softDropKeyTask: Task<Void, Never>? = nil
     // Button states from the previous input event, so each press fires once.
     private var wasMenuPressed = false
     private var wasBPressed = false
@@ -25,7 +24,6 @@ class GameControllerManager {
         disconnectionTask?.cancel()
         movementTask?.cancel()
         softDropTask?.cancel()
-        softDropKeyTask?.cancel()
     }
 
     private func setupControllers() {
@@ -186,29 +184,5 @@ class GameControllerManager {
         wasBPressed = false
         wasXPressed = false
         wasAPressed = false
-    }
-
-// MARK: - Keyboard/Touch Bridging
-    func handleKeyDownLeft() { gameManager?.handleAction(.moveLeft) }
-    func handleKeyDownRight() { gameManager?.handleAction(.moveRight) }
-    func handleKeyDownRotate() { gameManager?.handleAction(.rotate) }
-    func handleKeyDownHold() { gameManager?.handleAction(.hold) }
-    func handleKeyDownHardDrop() { gameManager?.hardDrop() }
-
-    func startSoftDropKey() {
-        guard softDropKeyTask == nil else { return }
-        softDropKeyTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(50))
-                await MainActor.run { [weak self] in
-                    self?.gameManager?.softDrop()
-                }
-            }
-        }
-    }
-
-    func stopSoftDropKey() {
-        softDropKeyTask?.cancel()
-        softDropKeyTask = nil
     }
 }
