@@ -8,6 +8,11 @@ class GameControllerManager {
     private var connectionTask: Task<Void, Never>?
     private var softDropTask: Task<Void, Never>? = nil
     private var softDropKeyTask: Task<Void, Never>? = nil
+    // Button states from the previous input event, so each press fires once.
+    private var wasMenuPressed = false
+    private var wasBPressed = false
+    private var wasXPressed = false
+    private var wasAPressed = false
 
     init(gameManager: GameManager) {
         self.gameManager = gameManager
@@ -52,21 +57,30 @@ class GameControllerManager {
     }
 
     private func processInput(menuPressed: Bool, bPressed: Bool, xPressed: Bool, aPressed: Bool, xAxis: Float, yAxis: Float) {
-        if menuPressed {
+        // This runs for every element change, including stick jitter while a
+        // button is held, so buttons only act on the press itself.
+        defer {
+            wasMenuPressed = menuPressed
+            wasBPressed = bPressed
+            wasXPressed = xPressed
+            wasAPressed = aPressed
+        }
+
+        if menuPressed && !wasMenuPressed {
             if gameManager?.state == .playing {
                 gameManager?.handleAction(.pause)
             } else if gameManager?.state == .paused {
                 gameManager?.handleAction(.resume)
             }
         }
-        if bPressed {
+        if bPressed && !wasBPressed {
             gameManager?.handleAction(.rotate)
         }
-        if xPressed {
+        if xPressed && !wasXPressed {
             gameManager?.handleAction(.hold)
         }
 
-        if aPressed {
+        if aPressed && !wasAPressed {
             gameManager?.hardDrop()
         }
 
