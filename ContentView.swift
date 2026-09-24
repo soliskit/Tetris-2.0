@@ -4,6 +4,7 @@ struct ContentView: View {
     var gameManager: GameManager
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("highScore") private var highScore: Int = 0
+    @State private var dragStartLocation: CGPoint?
     @State private var dragCellOffset: Int = 0
     @State private var dragRowOffset: Int = 0
     @State private var cellWidth: CGFloat = 32
@@ -65,6 +66,13 @@ struct ContentView: View {
                         .gesture(
                             DragGesture(minimumDistance: 3)
                                 .onChanged { gesture in
+                                    // A cancelled drag never calls onEnded, so treat a new start
+                                    // point as a new drag and drop any offsets left over.
+                                    if gesture.startLocation != dragStartLocation {
+                                        dragStartLocation = gesture.startLocation
+                                        dragCellOffset = 0
+                                        dragRowOffset = 0
+                                    }
                                     let newColOffset = Int(gesture.translation.width / cellWidth)
                                     let colDelta = newColOffset - dragCellOffset
                                     if colDelta != 0 {
@@ -103,6 +111,7 @@ struct ContentView: View {
                                     }
                                 }
                                 .onEnded { _ in
+                                    dragStartLocation = nil
                                     dragCellOffset = 0
                                     dragRowOffset = 0
                                     withAnimation(.interpolatingSpring(duration: 0.08, bounce: 0)) {
@@ -125,15 +134,28 @@ struct ContentView: View {
                 moveRight: { gameManager.handleAction(.moveRight) },
                 rotate: { gameManager.handleAction(.rotate) },
                 drop: { gameManager.handleAction(.drop) },
-                hold: { gameManager.handleAction(.hold) }
+                hold: { gameManager.handleAction(.hold) },
+                newGame: { gameManager.handleAction(.newGame) },
+                continueGame: { gameManager.handleAction(.continueGame) },
+                togglePause: { gameManager.togglePause() }
             )
         }
         .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase != .active else { return }
+            // Leaving the app cancels a drag in progress without calling onEnded.
+            resetDragState()
             // Pausing also saves, so leaving the app keeps the run for Continue.
-            if newPhase != .active, gameManager.state == .playing {
+            if gameManager.state == .playing {
                 gameManager.handleAction(.pause)
             }
         }
+    }
+
+    private func resetDragState() {
+        dragStartLocation = nil
+        dragCellOffset = 0
+        dragRowOffset = 0
+        horizontalDragOffset = 0
     }
 }
 
