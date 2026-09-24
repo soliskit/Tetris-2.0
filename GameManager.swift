@@ -136,9 +136,7 @@ class GameManager {
         lockDelayTask = Task {
             try? await Task.sleep(for: .seconds(lockDelayInterval))
             guard !Task.isCancelled, state == .playing else { return }
-            lockTetrominoInPlace()
-            clearFullRows()
-            generateNextTetromino()
+            lockAndSpawnNext()
             if state == .playing { startGameLoop() }
         }
     }
@@ -161,6 +159,17 @@ class GameManager {
         lockDelayResetCount = 0
     }
 
+    private func lockAndSpawnNext() {
+        lockTetrominoInPlace()
+        let clearedLines = clearFullRows()
+        generateNextTetromino()
+        // Checkpoint only once the next piece is in play. Saving before the
+        // spawn stored the locked piece as if it were still falling.
+        if clearedLines, state == .playing {
+            saveGameSession()
+        }
+    }
+
     private func lockTetrominoInPlace() {
         currentTetromino.shape.enumerated().forEach { y, row in
             row.enumerated().forEach { x, block in
@@ -176,12 +185,13 @@ class GameManager {
     }
 
     // MARK: - Board Management
-    private func clearFullRows() {
+    /// Removes completed rows and updates the score. Returns whether any rows were cleared.
+    private func clearFullRows() -> Bool {
         let scores = [1: 100, 2: 300, 3: 500, 4: 800]
         let completedLineIndices = gameBoard.indices.filter { row in
             gameBoard[row].allSatisfy { $0.isFilled }
         }
-        guard !completedLineIndices.isEmpty else { return }
+        guard !completedLineIndices.isEmpty else { return false }
         completedLineIndices.reversed().forEach { index in
             gameBoard.remove(at: index)
         }
@@ -192,7 +202,7 @@ class GameManager {
         if score > highScore {
             highScore = score
         }
-        saveGameSession()
+        return true
     }
 
     private func isValidTetrominoPosition(tetromino: Tetromino, at position: Position) -> Bool {
@@ -309,9 +319,7 @@ class GameManager {
         // Move current piece to the ghost landing position instantly
         let g = ghostTetromino
         currentTetromino.position = g.position
-        lockTetrominoInPlace()
-        clearFullRows()
-        generateNextTetromino()
+        lockAndSpawnNext()
         if state == .playing {
             startGameLoop()
         }

@@ -6,6 +6,7 @@ class GameControllerManager {
     private var movementDirection: Direction?
     private var movementTask: Task<Void, Never>?
     private var connectionTask: Task<Void, Never>?
+    private var disconnectionTask: Task<Void, Never>?
     private var softDropTask: Task<Void, Never>? = nil
     private var softDropKeyTask: Task<Void, Never>? = nil
     // Button states from the previous input event, so each press fires once.
@@ -21,6 +22,7 @@ class GameControllerManager {
 
     deinit {
         connectionTask?.cancel()
+        disconnectionTask?.cancel()
         movementTask?.cancel()
         softDropTask?.cancel()
         softDropKeyTask?.cancel()
@@ -33,6 +35,14 @@ class GameControllerManager {
                 if let controller = notification.object as? GCController {
                     configure(controller: controller)
                 }
+            }
+        }
+
+        // A controller that drops out mid press never reports the release.
+        disconnectionTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .GCControllerDidDisconnect) {
+                guard let self, !Task.isCancelled else { return }
+                self.releaseAllInput()
             }
         }
 
@@ -116,6 +126,12 @@ class GameControllerManager {
             guard !Task.isCancelled else { return }
             // ARR: fast repeat
             while !Task.isCancelled {
+                // A release while the app is in the background is never
+                // reported, so stop repeating once the game isn't playing.
+                guard gameManager?.state == .playing else {
+                    stopMoving()
+                    return
+                }
                 switch movementDirection {
                     case .left:
                         gameManager?.handleAction(.moveLeft)
@@ -142,7 +158,13 @@ class GameControllerManager {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(50))
                 await MainActor.run { [weak self] in
-                    self?.gameManager?.softDrop()
+                    guard let self else { return }
+                    // Same as movement: stop repeating once the game isn't playing.
+                    if self.gameManager?.state == .playing {
+                        self.gameManager?.softDrop()
+                    } else {
+                        self.stopSoftDrop()
+                    }
                 }
             }
         }
@@ -151,6 +173,17 @@ class GameControllerManager {
     private func stopSoftDrop() {
         softDropTask?.cancel()
         softDropTask = nil
+    }
+
+    /// Clears held input so nothing keeps repeating, and so the next press on a
+    /// reconnected controller isn't mistaken for a button that was never released.
+    private func releaseAllInput() {
+        stopMoving()
+        stopSoftDrop()
+        wasMenuPressed = false
+        wasBPressed = false
+        wasXPressed = false
+        wasAPressed = false
     }
 
 // MARK: - Keyboard/Touch Bridging

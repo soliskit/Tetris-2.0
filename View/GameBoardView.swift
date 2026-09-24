@@ -38,24 +38,30 @@ struct GameBoardView: View {
                 }                                                     
 
                 let tetromino = gameManager.currentTetromino
-                ForEach(0..<tetromino.shape.count, id: \.self) { row in
-                    ForEach(0..<tetromino.shape[row].count, id: \.self) { column in
-                        if tetromino.shape[row][column] {
-                            let tetrominoColumn = CGFloat(tetromino.position.column + column)
-                            let tetrominoRow = CGFloat(tetromino.position.row + row)
+                ZStack {
+                    ForEach(0..<tetromino.shape.count, id: \.self) { row in
+                        ForEach(0..<tetromino.shape[row].count, id: \.self) { column in
+                            if tetromino.shape[row][column] {
+                                let tetrominoColumn = CGFloat(tetromino.position.column + column)
+                                let tetrominoRow = CGFloat(tetromino.position.row + row)
 
-                            if tetrominoColumn >= 0, tetrominoColumn < CGFloat(columns), tetrominoRow >= 0, tetrominoRow < CGFloat(rows) {
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(tetromino.color.value)
-                                    .frame(width: blockSize - 1, height: blockSize - 1)
-                                    .position(x: blockSize * tetrominoColumn + blockSize / 2 + horizontalDragOffset,
-                                              y: blockSize * tetrominoRow + blockSize / 2)
-                                    .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
+                                if tetrominoColumn >= 0, tetrominoColumn < CGFloat(columns), tetrominoRow >= 0, tetrominoRow < CGFloat(rows) {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(tetromino.color.value)
+                                        .frame(width: blockSize - 1, height: blockSize - 1)
+                                        .position(x: blockSize * tetrominoColumn + blockSize / 2 + horizontalDragOffset,
+                                                  y: blockSize * tetrominoRow + blockSize / 2)
+                                        .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
+                                }
                             }
                         }
                     }
+                    .frame(width: boardDimensions.width, height: boardDimensions.height)
                 }
-                .frame(width: boardDimensions.width, height: boardDimensions.height)
+                // Fresh views for each new piece, so the row animation only
+                // smooths falling and never sweeps a new piece up from the last
+                // one's landing spot.
+                .id(tetromino.id)
             }
         }
     }
