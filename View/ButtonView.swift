@@ -7,15 +7,26 @@ struct ButtonView: View {
     var body: some View {
         HStack {
             if gameManager.state == .gameOver {
-                Button("New Game") {
-                    gameManager.handleAction(.newGame)
-                }
-                .buttonStyle(GameControlButtonStyle())
-                if isSessionSaved {
-                    Button("Continue") {
-                        gameManager.handleAction(.continueGame)
+                VStack(spacing: 8) {
+                    HStack {
+                        Button("New Game") {
+                            gameManager.handleAction(.newGame)
+                        }
+                        .buttonStyle(GameControlButtonStyle())
+                        if isSessionSaved {
+                            Button("Continue") {
+                                gameManager.handleAction(.continueGame)
+                            }
+                            .buttonStyle(GameControlButtonStyle())
+                        }
                     }
-                    .buttonStyle(GameControlButtonStyle())
+                    // Only shown once GameController reports a keyboard, so it
+                    // also tells you the game can see yours.
+                    if gameManager.isKeyboardConnected {
+                        Text(isSessionSaved ? "Return: New Game    C: Continue" : "Return: New Game")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 }
             } else {
                 Spacer()

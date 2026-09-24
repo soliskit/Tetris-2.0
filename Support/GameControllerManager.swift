@@ -7,6 +7,8 @@ class GameControllerManager {
     private var movementTask: Task<Void, Never>?
     private var connectionTask: Task<Void, Never>?
     private var disconnectionTask: Task<Void, Never>?
+    private var keyboardConnectionTask: Task<Void, Never>?
+    private var keyboardDisconnectionTask: Task<Void, Never>?
     private var softDropTask: Task<Void, Never>? = nil
     // Button states from the previous input event, so each press fires once.
     private var wasMenuPressed = false
@@ -23,6 +25,8 @@ class GameControllerManager {
     deinit {
         connectionTask?.cancel()
         disconnectionTask?.cancel()
+        keyboardConnectionTask?.cancel()
+        keyboardDisconnectionTask?.cancel()
         movementTask?.cancel()
         softDropTask?.cancel()
     }
@@ -50,7 +54,91 @@ class GameControllerManager {
         for controller in GCController.controllers() {
             configure(controller: controller)
         }
+
+        // The keyboard is read through GameController too. The UIKit responder
+        // chain never delivered keys to the game when run in Swift Playgrounds.
+        keyboardConnectionTask = Task { [weak self] in
+            for await notification in NotificationCenter.default.notifications(named: .GCKeyboardDidConnect) {
+                guard let self, !Task.isCancelled else { return }
+                if let keyboard = notification.object as? GCKeyboard {
+                    self.configure(keyboard: keyboard)
+                }
+            }
+        }
+
+        keyboardDisconnectionTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: .GCKeyboardDidDisconnect) {
+                guard let self, !Task.isCancelled else { return }
+                self.stopMoving()
+                self.gameManager?.isKeyboardConnected = GCKeyboard.coalesced != nil
+            }
+        }
+
+        if let keyboard = GCKeyboard.coalesced {
+            configure(keyboard: keyboard)
+        }
     }
+
+    // MARK: - Keyboard
+
+    private func configure(keyboard: GCKeyboard) {
+        gameManager?.isKeyboardConnected = true
+        keyboard.keyboardInput?.keyChangedHandler = { [weak self] keyboardInput, _, keyCode, pressed in
+            func isDown(_ key: GCKeyCode) -> Bool {
+                keyboardInput.button(forKeyCode: key)?.isPressed ?? false
+            }
+            let modifierHeld = [GCKeyCode.leftGUI, .rightGUI, .leftControl, .rightControl, .leftAlt, .rightAlt].contains(where: isDown)
+            let leftHeld = isDown(.keyA)
+            let rightHeld = isDown(.keyD)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.processKey(keyCode, pressed: pressed, modifierHeld: modifierHeld, leftHeld: leftHeld, rightHeld: rightHeld)
+            }
+        }
+    }
+
+    /// Called once when a key goes down and once when it comes back up, so a
+    /// held key never repeats its action. A and D use the same auto repeat as
+    /// the stick.
+    private func processKey(_ key: GCKeyCode, pressed: Bool, modifierHeld: Bool, leftHeld: Bool, rightHeld: Bool) {
+        // Leave shortcuts like Command H to the system.
+        if pressed && modifierHeld { return }
+
+        if key == .keyA || key == .keyD {
+            // The newest press wins. Letting go falls back to the other key if
+            // it's still down.
+            if pressed {
+                startMoving(key == .keyA ? .left : .right)
+            } else if leftHeld {
+                startMoving(.left)
+            } else if rightHeld {
+                startMoving(.right)
+            } else {
+                stopMoving()
+            }
+            return
+        }
+
+        guard pressed else { return }
+        switch key {
+            case .keyW:
+                gameManager?.handleAction(.rotate)
+            case .keyS:
+                gameManager?.handleAction(.drop)
+            case .keyH:
+                gameManager?.handleAction(.hold)
+            case .returnOrEnter:
+                gameManager?.handleAction(.newGame)
+            case .keyC:
+                gameManager?.handleAction(.continueGame)
+            case .keyP, .escape:
+                gameManager?.togglePause()
+            default:
+                break
+        }
+    }
+
+    // MARK: - Controller
 
     private func configure(controller: GCController) {
         controller.extendedGamepad?.valueChangedHandler = { [weak self] gamepad, _ in
