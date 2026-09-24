@@ -8,7 +8,13 @@ class KeyboardInputViewController: UIViewController {
     var holdAction: (() -> Void)?
     
     override var canBecomeFirstResponder: Bool { true }
-    
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Key commands are only delivered along the responder chain.
+        becomeFirstResponder()
+    }
+
     override var keyCommands: [UIKeyCommand]? {
         return [
             UIKeyCommand(action: #selector(moveLeft), input: "a", modifierFlags: [], discoverabilityTitle: "Move Piece Left"),

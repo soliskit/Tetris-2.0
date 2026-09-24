@@ -322,16 +322,18 @@ class GameManager {
         let newPosition = Position(row: currentTetromino.position.row, column: currentTetromino.position.column + deltaX)
         if isValidTetrominoPosition(tetromino: currentTetromino, at: newPosition) {
             currentTetromino.position = newPosition
+            // Gravity keeps ticking on its own; restarting it here would let
+            // repeated sideways moves keep the piece floating forever.
             resetLockDelay()
-            if lockDelayTask == nil {
-                startGameLoop()
-            }
         }
     }
 
     private func holdTetromino() {
         guard state == .playing, canHoldTetromino else { return }
         stopGameLoop()
+        // The outgoing piece may be resting on the stack with a lock pending;
+        // without this, the swapped in piece gets locked at the spawn point.
+        cancelLockDelay()
         if var tetrominoToSwap = heldTetromino {
             // Reset held piece to spawn state
             tetrominoToSwap.shape = tetrominoToSwap.rotations[0]

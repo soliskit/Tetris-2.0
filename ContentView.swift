@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State var gameManager = GameManager()
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("highScore") private var highScore: Int = 0
     @State private var dragCellOffset: Int = 0
     @State private var dragRowOffset: Int = 0
@@ -126,6 +127,12 @@ struct ContentView: View {
                 drop: { gameManager.handleAction(.drop) },
                 hold: { gameManager.handleAction(.hold) }
             )
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Pausing also saves, so leaving the app keeps the run for Continue.
+            if newPhase != .active, gameManager.state == .playing {
+                gameManager.handleAction(.pause)
+            }
         }
     }
 }
