@@ -170,6 +170,7 @@ class GameControllerManager {
         softDropTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(50))
+                guard !Task.isCancelled else { return }
                 guard gameManager?.state == .playing else {
                     stopSoftDrop()
                     return
