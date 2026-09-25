@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// Represents a single cell within the game board of a Tetris-like game.
 ///
 /// Each `GameCell` can be in one of two states: filled or unfilled.

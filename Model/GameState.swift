@@ -1,5 +1,3 @@
-import Foundation
-
 /// Represents the current state of the game.
 ///
 /// This enum defines the various states the game can be in at any given time,

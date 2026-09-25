@@ -9,54 +9,34 @@ struct GameBoardView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let blockSize = calculateBlockSize(from: geometry.size)
-            let boardDimensions = calculateBoardDimensions(blockSize: blockSize)
+            let blockSize = min(geometry.size.width / CGFloat(columns), geometry.size.height / CGFloat(rows))
+            let boardWidth = blockSize * CGFloat(columns)
+            let boardHeight = blockSize * CGFloat(rows)
             ZStack {
-                GridLinesView(columns: columns, rows: rows, blockSize: blockSize, boardWidth: boardDimensions.width, boardHeight: boardDimensions.height)
+                GridLinesView(columns: columns, rows: rows, blockSize: blockSize, boardWidth: boardWidth, boardHeight: boardHeight)
 
                 ForEach(0..<rows, id: \.self) { row in
                     ForEach(0..<columns, id: \.self) { column in
-                        if let cell = gameManager.gameBoard[safeRow: row, safeColumn: column], cell.isFilled == true {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(cell.color?.value ?? .clear)
-                                .frame(width: blockSize - 1, height: blockSize - 1)
-                                .position(x: blockSize * CGFloat(column) + blockSize / 2, y: blockSize * CGFloat(row) + blockSize / 2)
+                        if let cell = gameManager.gameBoard[safeRow: row, safeColumn: column], cell.isFilled {
+                            place(RoundedRectangle(cornerRadius: 3).fill(cell.color?.value ?? .clear), at: Position(row: row, column: column), size: blockSize)
                         }
                     }
                 }
 
                 // Ghost piece
-                let ghostCells = gameManager.ghostCells()
+                let ghostCells = gameManager.ghostTetromino.cells
                 let ghostColor = gameManager.currentTetromino.color.value
                 ForEach(0..<ghostCells.count, id: \.self) { index in
-                    let cell = ghostCells[index]
-                    RoundedRectangle(cornerRadius: 3)
-                        .stroke(ghostColor.opacity(0.5), lineWidth: 1.5)
-                        .frame(width: blockSize - 1, height: blockSize - 1)
-                        .position(x: blockSize * CGFloat(cell.col) + blockSize / 2,
-                                  y: blockSize * CGFloat(cell.row) + blockSize / 2)
-                }                                                     
+                    place(RoundedRectangle(cornerRadius: 3).stroke(ghostColor.opacity(0.5), lineWidth: 1.5), at: ghostCells[index], size: blockSize)
+                }
 
                 let tetromino = gameManager.currentTetromino
                 ZStack {
-                    ForEach(0..<tetromino.shape.count, id: \.self) { row in
-                        ForEach(0..<tetromino.shape[row].count, id: \.self) { column in
-                            if tetromino.shape[row][column] {
-                                let tetrominoColumn = CGFloat(tetromino.position.column + column)
-                                let tetrominoRow = CGFloat(tetromino.position.row + row)
-
-                                if tetrominoColumn >= 0, tetrominoColumn < CGFloat(columns), tetrominoRow >= 0, tetrominoRow < CGFloat(rows) {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(tetromino.color.value)
-                                        .frame(width: blockSize - 1, height: blockSize - 1)
-                                        .position(x: blockSize * tetrominoColumn + blockSize / 2 + horizontalDragOffset,
-                                                  y: blockSize * tetrominoRow + blockSize / 2)
-                                        .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
-                                }
-                            }
-                        }
+                    ForEach(Array(tetromino.cells.enumerated()), id: \.offset) { _, cell in
+                        place(RoundedRectangle(cornerRadius: 3).fill(tetromino.color.value), at: cell, size: blockSize, xOffset: horizontalDragOffset)
+                            .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
                     }
-                    .frame(width: boardDimensions.width, height: boardDimensions.height)
+                    .frame(width: boardWidth, height: boardHeight)
                 }
                 // Fresh views for each new piece, so the row animation only
                 // smooths falling and never sweeps a new piece up from the last
@@ -66,12 +46,11 @@ struct GameBoardView: View {
         }
     }
 
-    private func calculateBlockSize(from size: CGSize) -> CGFloat {
-        min(size.width / CGFloat(columns), size.height / CGFloat(rows))
-    }
-
-    private func calculateBoardDimensions(blockSize: CGFloat) -> CGSize {
-        CGSize(width: blockSize * CGFloat(columns), height: blockSize * CGFloat(rows))
+    /// Sizes `block` to one cell, less a point for the grid line, and centers it on `cell`.
+    private func place(_ block: some View, at cell: Position, size: CGFloat, xOffset: CGFloat = 0) -> some View {
+        block
+            .frame(width: size - 1, height: size - 1)
+            .position(x: size * CGFloat(cell.column) + size / 2 + xOffset, y: size * CGFloat(cell.row) + size / 2)
     }
 }
 
