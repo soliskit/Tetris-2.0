@@ -28,9 +28,6 @@ class GameManager {
     private var standardDropInterval: TimeInterval {
         max(0.25, 0.7 - (0.02 * Double(level - 1)))
     }
-    private var quickDropInterval: TimeInterval {
-        max(0.03, standardDropInterval * 0.25)
-    }
 
     init() {
         currentTetromino = TetrominoFactory.generate().spawned(columns: columns)
@@ -92,7 +89,7 @@ class GameManager {
         }
     }
 
-    private func dropTetromino(softDrop: Bool = false) {
+    private func dropTetromino() {
         guard state == .playing else { return }
         if currentTetromino.fits(in: gameBoard, at: currentTetromino.position.below) {
             currentTetromino.position = currentTetromino.position.below
@@ -102,7 +99,7 @@ class GameManager {
             pieceLanded()
         }
         if state == .playing {
-            startGameLoop(withSoftDrop: softDrop)
+            startGameLoop()
         }
     }
 
@@ -200,9 +197,9 @@ class GameManager {
         return ghost
     }
 
-    private func startGameLoop(withSoftDrop: Bool = false) {
+    private func startGameLoop() {
         stopGameLoop()
-        let interval = withSoftDrop ? quickDropInterval : standardDropInterval
+        let interval = standardDropInterval
         gameLoopTask = Task {
             try? await Task.sleep(for: .seconds(interval))
             guard !Task.isCancelled, state == .playing else { return }
@@ -261,7 +258,7 @@ class GameManager {
     }
 
     func softDrop() {
-        dropTetromino(softDrop: true)
+        dropTetromino()
     }
 
     func hardDrop() {
