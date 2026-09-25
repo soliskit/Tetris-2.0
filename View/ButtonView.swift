@@ -20,8 +20,6 @@ struct ButtonView: View {
                             .buttonStyle(GameControlButtonStyle())
                         }
                     }
-                    // Only shown once GameController reports a keyboard, so it
-                    // also tells you the game can see yours.
                     if gameManager.isKeyboardConnected {
                         Text(isSessionSaved ? "Return: New Game    C: Continue" : "Return: New Game")
                             .font(.caption)
@@ -30,29 +28,16 @@ struct ButtonView: View {
                 }
             } else {
                 Spacer()
-                if gameManager.state == .paused {
-                    Button(action: {
-                        gameManager.handleAction(.resume)
-                    }, label: {
-                        Image(systemName: "play.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 50, height: 50)
-                            .foregroundStyle(.white)
-                    })
-                    .glassEffect(.regular, in: .circle)
-                } else if gameManager.state == .playing {
-                    Button(action: {
-                        gameManager.handleAction(.pause)
-                    }, label: {
-                        Image(systemName: "pause.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 50, height: 50)
-                            .foregroundStyle(.white)
-                    })
-                    .glassEffect(.regular, in: .circle)
-                }
+                Button(action: {
+                    gameManager.togglePause()
+                }, label: {
+                    Image(systemName: gameManager.state == .paused ? "play.circle.fill" : "pause.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 50, height: 50)
+                        .foregroundStyle(.white)
+                })
+                .glassEffect(.regular, in: .circle)
             }
         }
     }

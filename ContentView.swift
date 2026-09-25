@@ -66,12 +66,9 @@ struct ContentView: View {
                         .gesture(
                             DragGesture(minimumDistance: 3)
                                 .onChanged { gesture in
-                                    // A cancelled drag never calls onEnded, so treat a new start
-                                    // point as a new drag and drop any offsets left over.
                                     if gesture.startLocation != dragStartLocation {
+                                        resetDragState()
                                         dragStartLocation = gesture.startLocation
-                                        dragCellOffset = 0
-                                        dragRowOffset = 0
                                     }
                                     let newColOffset = Int(gesture.translation.width / cellWidth)
                                     let colDelta = newColOffset - dragCellOffset
@@ -83,22 +80,12 @@ struct ContentView: View {
                                         dragCellOffset = newColOffset
                                     }
 
-                                    // Fractional offset within the current cell for smooth visual tracking
                                     let fractional = gesture.translation.width - CGFloat(dragCellOffset) * cellWidth
                                     let clamped = max(-cellWidth * 0.5, min(cellWidth * 0.5, fractional))
 
-                                    // Clamp further so the piece doesn't visually leave the board
-                                    let tetromino = gameManager.currentTetromino
-                                    let leftmostCol = tetromino.shape.enumerated().reduce(Int.max) { result, row in
-                                        let minInRow = row.element.enumerated().filter(\.element).map(\.offset).min() ?? Int.max
-                                        return min(result, minInRow)
-                                    }
-                                    let rightmostCol = tetromino.shape.enumerated().reduce(Int.min) { result, row in
-                                        let maxInRow = row.element.enumerated().filter(\.element).map(\.offset).max() ?? Int.min
-                                        return max(result, maxInRow)
-                                    }
-                                    let leftPixelMargin = CGFloat(tetromino.position.column + leftmostCol) * cellWidth
-                                    let rightPixelMargin = (CGFloat(10 - 1 - (tetromino.position.column + rightmostCol))) * cellWidth
+                                    let pieceColumns = gameManager.currentTetromino.cells.map(\.column)
+                                    let leftPixelMargin = CGFloat(pieceColumns.min() ?? 0) * cellWidth
+                                    let rightPixelMargin = CGFloat(10 - 1 - (pieceColumns.max() ?? 9)) * cellWidth
                                     horizontalDragOffset = max(-leftPixelMargin, min(rightPixelMargin, clamped))
 
                                     let newRowOffset = max(0, Int(gesture.translation.height / cellWidth))
@@ -111,11 +98,8 @@ struct ContentView: View {
                                     }
                                 }
                                 .onEnded { _ in
-                                    dragStartLocation = nil
-                                    dragCellOffset = 0
-                                    dragRowOffset = 0
                                     withAnimation(.interpolatingSpring(duration: 0.08, bounce: 0)) {
-                                        horizontalDragOffset = 0
+                                        resetDragState()
                                     }
                                 }
                         )
@@ -130,9 +114,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase != .active else { return }
-            // Leaving the app cancels a drag in progress without calling onEnded.
             resetDragState()
-            // Pausing also saves, so leaving the app keeps the run for Continue.
             if gameManager.state == .playing {
                 gameManager.handleAction(.pause)
             }

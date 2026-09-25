@@ -1,5 +1,3 @@
-import Foundation
-
 struct GameSession: Codable, Sendable {
     var gameBoard: [[GameCell]]
     var score: Int
