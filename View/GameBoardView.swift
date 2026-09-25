@@ -4,7 +4,6 @@ struct GameBoardView: View {
     private let rows: Int = 20
     private let columns: Int = 10
     var gameManager: GameManager
-    /// Fractional horizontal drag offset in points, applied visually to the active piece.
     var horizontalDragOffset: CGFloat = 0
 
     var body: some View {
@@ -23,7 +22,6 @@ struct GameBoardView: View {
                     }
                 }
 
-                // Ghost piece
                 let ghostCells = gameManager.ghostTetromino.cells
                 let ghostColor = gameManager.currentTetromino.color.value
                 ForEach(0..<ghostCells.count, id: \.self) { index in
@@ -38,15 +36,11 @@ struct GameBoardView: View {
                     }
                     .frame(width: boardWidth, height: boardHeight)
                 }
-                // Fresh views for each new piece, so the row animation only
-                // smooths falling and never sweeps a new piece up from the last
-                // one's landing spot.
                 .id(tetromino.id)
             }
         }
     }
 
-    /// Sizes `block` to one cell, less a point for the grid line, and centers it on `cell`.
     private func place(_ block: some View, at cell: Position, size: CGFloat, xOffset: CGFloat = 0) -> some View {
         block
             .frame(width: size - 1, height: size - 1)

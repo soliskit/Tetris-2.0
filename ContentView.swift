@@ -66,8 +66,6 @@ struct ContentView: View {
                         .gesture(
                             DragGesture(minimumDistance: 3)
                                 .onChanged { gesture in
-                                    // A cancelled drag never calls onEnded, so treat a new start
-                                    // point as a new drag and drop any offsets left over.
                                     if gesture.startLocation != dragStartLocation {
                                         resetDragState()
                                         dragStartLocation = gesture.startLocation
@@ -82,11 +80,9 @@ struct ContentView: View {
                                         dragCellOffset = newColOffset
                                     }
 
-                                    // Fractional offset within the current cell for smooth visual tracking
                                     let fractional = gesture.translation.width - CGFloat(dragCellOffset) * cellWidth
                                     let clamped = max(-cellWidth * 0.5, min(cellWidth * 0.5, fractional))
 
-                                    // Clamp further so the piece doesn't visually leave the board
                                     let pieceColumns = gameManager.currentTetromino.cells.map(\.column)
                                     let leftPixelMargin = CGFloat(pieceColumns.min() ?? 0) * cellWidth
                                     let rightPixelMargin = CGFloat(10 - 1 - (pieceColumns.max() ?? 9)) * cellWidth
@@ -118,9 +114,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase != .active else { return }
-            // Leaving the app cancels a drag in progress without calling onEnded.
             resetDragState()
-            // Pausing also saves, so leaving the app keeps the run for Continue.
             if gameManager.state == .playing {
                 gameManager.handleAction(.pause)
             }

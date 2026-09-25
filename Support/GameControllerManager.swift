@@ -8,9 +8,7 @@ class GameControllerManager {
     private var softDropTask: Task<Void, Never>? = nil
     private var notificationTasks: [Task<Void, Never>] = []
     private enum PadButton { case menu, a, b, x, y }
-    // Controller buttons down at the previous input event, so each press fires once.
     private var heldButtons: Set<PadButton> = []
-    /// Keys that act once per press. A and D move and P or Escape pause, in processKey.
     private static let keyActions: [GCKeyCode: PlayerAction] = [
         .keyW: .rotate, .keyS: .drop, .keyH: .hold, .returnOrEnter: .newGame, .keyC: .continueGame
     ]
@@ -32,14 +30,11 @@ class GameControllerManager {
                 manager.configure(controller: controller)
             }
         }
-        // A controller that drops out mid press never reports the release.
         observe(.GCControllerDidDisconnect) { manager, _ in
             manager.releaseAllInput()
         }
         GCController.controllers().forEach(configure(controller:))
 
-        // The keyboard is read through GameController too. The UIKit responder
-        // chain never delivered keys to the game when run in Swift Playgrounds.
         observe(.GCKeyboardDidConnect) { manager, notification in
             if let keyboard = notification.object as? GCKeyboard {
                 manager.configure(keyboard: keyboard)
@@ -54,8 +49,6 @@ class GameControllerManager {
         }
     }
 
-    /// Calls `handle` for every `name` notification. The loop holds the manager
-    /// weakly, so it doesn't keep it alive after its GameManager is gone.
     private func observe(_ name: Notification.Name, _ handle: @escaping @MainActor (GameControllerManager, Notification) -> Void) {
         notificationTasks.append(Task { [weak self] in
             for await notification in NotificationCenter.default.notifications(named: name) {
@@ -64,8 +57,6 @@ class GameControllerManager {
             }
         })
     }
-
-    // MARK: - Keyboard
 
     private func configure(keyboard: GCKeyboard) {
         gameManager?.isKeyboardConnected = true
@@ -82,16 +73,10 @@ class GameControllerManager {
         }
     }
 
-    /// Called once when a key goes down and once when it comes back up, so a
-    /// held key never repeats its action. A and D use the same auto repeat as
-    /// the stick.
     private func processKey(_ key: GCKeyCode, pressed: Bool, modifierHeld: Bool, leftHeld: Bool, rightHeld: Bool) {
-        // Leave shortcuts like Command H to the system.
         if pressed && modifierHeld { return }
 
         if key == .keyA || key == .keyD {
-            // The newest press wins. Letting go falls back to the other key if
-            // it's still down.
             if pressed {
                 startMoving(key == .keyA ? .moveLeft : .moveRight)
             } else if leftHeld {
@@ -108,8 +93,6 @@ class GameControllerManager {
         }
     }
 
-    // MARK: - Controller
-
     private func configure(controller: GCController) {
         controller.extendedGamepad?.valueChangedHandler = { [weak self] gamepad, _ in
             let buttons: [PadButton: GCControllerButtonInput] = [
@@ -125,13 +108,9 @@ class GameControllerManager {
     }
 
     private func processInput(pressed: Set<PadButton>, xAxis: Float, yAxis: Float) {
-        // This runs for every element change, including stick jitter while a
-        // button is held, so buttons only act on the press itself.
         let newPresses = pressed.subtracting(heldButtons)
         heldButtons = pressed
 
-        // Menu starts a new game from the game over screen. A is left out on
-        // purpose: players often mash it as the game ends.
         if newPresses.contains(.menu) {
             if gameManager?.state == .gameOver {
                 gameManager?.handleAction(.newGame)
@@ -159,12 +138,9 @@ class GameControllerManager {
         }
     }
 
-    /// DAS (Delayed Auto Shift) — initial delay before auto-repeat starts.
     private let dasDelay: Duration = .milliseconds(167)
-    /// ARR (Auto Repeat Rate) — interval between repeated moves.
     private let arrInterval: Duration = .milliseconds(33)
 
-    /// Moves once now, then repeats after the DAS delay at the ARR rate.
     private func startMoving(_ action: PlayerAction) {
         guard movement != action else { return }
         movement = action
@@ -173,8 +149,6 @@ class GameControllerManager {
         movementTask = Task {
             try? await Task.sleep(for: dasDelay)
             while !Task.isCancelled {
-                // A release while the app is in the background is never
-                // reported, so stop repeating once the game isn't playing.
                 guard gameManager?.state == .playing else {
                     stopMoving()
                     return
@@ -196,7 +170,6 @@ class GameControllerManager {
         softDropTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(50))
-                // Same as movement: stop repeating once the game isn't playing.
                 guard gameManager?.state == .playing else {
                     stopSoftDrop()
                     return
@@ -211,8 +184,6 @@ class GameControllerManager {
         softDropTask = nil
     }
 
-    /// Clears held input so nothing keeps repeating, and so the next press on a
-    /// reconnected controller isn't mistaken for a button that was never released.
     private func releaseAllInput() {
         stopMoving()
         stopSoftDrop()

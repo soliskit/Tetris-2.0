@@ -20,8 +20,6 @@ struct ButtonView: View {
                             .buttonStyle(GameControlButtonStyle())
                         }
                     }
-                    // Only shown once GameController reports a keyboard, so it
-                    // also tells you the game can see yours.
                     if gameManager.isKeyboardConnected {
                         Text(isSessionSaved ? "Return: New Game    C: Continue" : "Return: New Game")
                             .font(.caption)
@@ -30,7 +28,6 @@ struct ButtonView: View {
                 }
             } else {
                 Spacer()
-                // Only paused or playing reach here; togglePause resumes or pauses.
                 Button(action: {
                     gameManager.togglePause()
                 }, label: {
