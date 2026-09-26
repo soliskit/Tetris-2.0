@@ -2,15 +2,15 @@ import Foundation
 
 struct Tetromino: Identifiable, Equatable, Codable, Sendable {
     var id = UUID()
-    var shape: [[Bool]]
     var color: CustomColor
     var position = Position(row: 0, column: 0)
     var rotations: [[[Bool]]]
     var rotationState: Int = 0
     var wallKickData: [[Position]]
 
+    var shape: [[Bool]] { rotations[rotationState] }
+
     init(rotations: [[[Bool]]], color: CustomColor, wallKickData: [[Position]]) {
-        self.shape = rotations[0]
         self.color = color
         self.rotations = rotations
         self.wallKickData = wallKickData
@@ -18,7 +18,6 @@ struct Tetromino: Identifiable, Equatable, Codable, Sendable {
 
     func spawned(columns: Int) -> Tetromino {
         var piece = self
-        piece.shape = rotations[0]
         piece.rotationState = 0
         piece.position = Position(row: 0, column: max(0, (columns - (rotations[0].first?.count ?? 4)) / 2))
         return piece
@@ -54,7 +53,6 @@ struct Tetromino: Identifiable, Equatable, Codable, Sendable {
             for kick in kicks {
                 let candidate = Position(row: position.row + kick.row, column: position.column + kick.column)
                 if Self.fits(rotations[state], at: candidate, in: gameBoard) {
-                    shape = rotations[state]
                     rotationState = state
                     position = candidate
                     return

@@ -1,0 +1,12 @@
+.DS_Store
+._*
+
+.swiftpm/playgrounds/CachedManifest.plist
+.swiftpm/playgrounds/DocumentThumbnail.plist
+.swiftpm/playgrounds/DocumentThumbnail.png
+
+.build/
+.swiftpm/xcode/
+DerivedData/
+xcuserdata/
+*.xcuserstate

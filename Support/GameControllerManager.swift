@@ -5,7 +5,7 @@ class GameControllerManager {
     weak var gameManager: GameManager?
     private var movement: PlayerAction?
     private var movementTask: Task<Void, Never>?
-    private var softDropTask: Task<Void, Never>? = nil
+    private var softDropTask: Task<Void, Never>?
     private var notificationTasks: [Task<Void, Never>] = []
     private enum PadButton { case menu, a, b, x, y }
     private var heldButtons: Set<PadButton> = []
