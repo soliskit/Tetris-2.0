@@ -1,6 +1,6 @@
 # Tetris 2.0
 
-A modern take on Tetris built entirely on an iPad with Swift Playgrounds. It uses SwiftUI with iOS 26 Liquid Glass styling and plays with touch, a hardware keyboard, or a game controller.
+A modern take on Tetris built entirely on an iPad with Swift Playgrounds. It uses SwiftUI and plays with touch, a hardware keyboard, or a game controller.
 
 This is a portfolio project and is not intended for the App Store.
 
@@ -66,7 +66,7 @@ The level goes up every 1,000 points. Pieces fall every 0.7 seconds at level 1, 
 
 ## Running the project
 
-You need an iPad running iPadOS 26 with Swift Playgrounds installed.
+You need an iPad with Swift Playgrounds installed.
 
 1. Clone the repository into a folder whose name ends in `.swiftpm`, for example `Tetris 2.0.swiftpm`. An iPad Git client such as Working Copy can clone straight into the Files app.
 2. Open that folder in Swift Playgrounds.
