@@ -3,8 +3,8 @@ import SwiftUI
 struct TetrominoPreview: View {
     private let columns: Int = 6
     private let rows: Int = 6
+    private let size: CGFloat = 60
     var tetromino: Tetromino?
-    var size: CGFloat = 100
 
     var body: some View {
         GeometryReader { geometry in

@@ -41,15 +41,14 @@ struct ContentView: View {
                     .glassEffect(.regular, in: .capsule)
 
                     HStack(alignment: .top) {
-                        TetrominoPreview(tetromino: gameManager.heldTetromino, size: 60)
+                        TetrominoPreview(tetromino: gameManager.heldTetromino)
                             .onTapGesture {
                                 gameManager.handleAction(.hold)
                             }
                         Spacer()
                         HStack(spacing: 4) {
-                            ForEach(Array(gameManager.nextTetrominos.prefix(3).enumerated()), id: \.element.id) { index, tetromino in
-                                TetrominoPreview(tetromino: tetromino, size: index == 0 ? 60 : 44)
-                                    .opacity(index == 0 ? 1.0 : 0.6)
+                            ForEach(gameManager.nextTetrominos.prefix(3)) { tetromino in
+                                TetrominoPreview(tetromino: tetromino)
                             }
                         }
                     }
