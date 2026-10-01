@@ -13,20 +13,19 @@ struct TetrominoPreview: View {
             let boardHeight = blockSize * CGFloat(rows)
 
             ZStack {
-                if let shape = tetromino?.shape, let color = tetromino?.color.value {
-                    let xOffset = (boardWidth - CGFloat(shape[0].count) * blockSize) / 2
-                    let yOffset = (boardHeight - CGFloat(shape.count) * blockSize) / 2
+                if let tetromino {
+                    let cells = Tetromino.cells(of: tetromino.shape, at: Position(row: 0, column: 0))
+                    let filledRows = cells.map(\.row)
+                    let filledColumns = cells.map(\.column)
+                    let centerRow = CGFloat((filledRows.min() ?? 0) + (filledRows.max() ?? 0)) / 2
+                    let centerColumn = CGFloat((filledColumns.min() ?? 0) + (filledColumns.max() ?? 0)) / 2
 
-                    ForEach(0..<shape.count, id: \.self) { row in
-                        ForEach(0..<shape[row].count, id: \.self) { column in
-                            if shape[row][column] {
-                                RoundedRectangle(cornerRadius: 3)
-                                    .foregroundColor(color)
-                                    .frame(width: blockSize - 1, height: blockSize - 1)
-                                    .offset(x: blockSize * CGFloat(column) + xOffset - boardWidth / 2 + blockSize / 2,
-                                            y: blockSize * CGFloat(row) + yOffset - boardHeight / 2 + blockSize / 2)
-                            }
-                        }
+                    ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(tetromino.color.value)
+                            .frame(width: blockSize - 1, height: blockSize - 1)
+                            .offset(x: blockSize * (CGFloat(cell.column) - centerColumn),
+                                    y: blockSize * (CGFloat(cell.row) - centerRow))
                     }
                 }
             }

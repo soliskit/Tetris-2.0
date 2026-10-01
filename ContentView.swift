@@ -56,7 +56,7 @@ struct ContentView: View {
                     GameBoardView(gameManager: gameManager, horizontalDragOffset: horizontalDragOffset)
                         .aspectRatio(0.5, contentMode: .fit)
                         .onGeometryChange(for: CGFloat.self) { proxy in
-                            proxy.size.width / 10
+                            max(1, proxy.size.width / 10)
                         } action: { newValue in
                             cellWidth = newValue
                         }
