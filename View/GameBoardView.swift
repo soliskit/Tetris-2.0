@@ -22,21 +22,23 @@ struct GameBoardView: View {
                     }
                 }
 
-                let ghostCells = gameManager.ghostTetromino.cells
-                let ghostColor = gameManager.currentTetromino.color.value
-                ForEach(0..<ghostCells.count, id: \.self) { index in
-                    place(RoundedRectangle(cornerRadius: 3).stroke(ghostColor.opacity(0.5), lineWidth: 1.5), at: ghostCells[index], size: blockSize)
-                }
-
-                let tetromino = gameManager.currentTetromino
-                ZStack {
-                    ForEach(Array(tetromino.cells.enumerated()), id: \.offset) { _, cell in
-                        place(RoundedRectangle(cornerRadius: 3).fill(tetromino.color.value), at: cell, size: blockSize, xOffset: horizontalDragOffset)
-                            .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
+                if gameManager.state != .gameOver {
+                    let ghostCells = gameManager.ghostTetromino.cells
+                    let ghostColor = gameManager.currentTetromino.color.value
+                    ForEach(0..<ghostCells.count, id: \.self) { index in
+                        place(RoundedRectangle(cornerRadius: 3).stroke(ghostColor.opacity(0.5), lineWidth: 1.5), at: ghostCells[index], size: blockSize)
                     }
-                    .frame(width: boardWidth, height: boardHeight)
+
+                    let tetromino = gameManager.currentTetromino
+                    ZStack {
+                        ForEach(Array(tetromino.cells.enumerated()), id: \.offset) { _, cell in
+                            place(RoundedRectangle(cornerRadius: 3).fill(tetromino.color.value), at: cell, size: blockSize, xOffset: horizontalDragOffset)
+                                .animation(.interpolatingSpring(duration: 0.12, bounce: 0), value: tetromino.position.row)
+                        }
+                        .frame(width: boardWidth, height: boardHeight)
+                    }
+                    .id(tetromino.id)
                 }
-                .id(tetromino.id)
             }
         }
     }
